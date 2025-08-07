@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ resume.full_name }} - Resume</title>
+    <link href="https://fonts.googleapis.com/css2?family={{ resume.font_pair.split('/')[0].replace(' ', '+') }}:wght@300;400;500;600;700&family={{ resume.font_pair.split('/')[1].replace(' ', '+') }}:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: '{{ resume.font_pair.split('/')[0] }}', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+        }
+        .container { max-width: 8.5in; margin: 0 auto; padding: 0.5in; }
+        .header { text-align: center; margin-bottom: 2rem; }
+        .name { font-size: 2.5rem; font-weight: 700; color: {{ resume.color_scheme }}; margin-bottom: 0.5rem; }
+        .contact-info { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; font-size: 0.9rem; }
+        .contact-item { display: flex; align-items: center; }
+        .section { margin-bottom: 2rem; }
+        .section-title { 
+            font-size: 1.4rem; 
+            font-weight: 600; 
+            color: {{ resume.color_scheme }}; 
+            border-bottom: 2px solid {{ resume.color_scheme }}; 
+            padding-bottom: 0.3rem; 
+            margin-bottom: 1rem; 
+        }
+        .summary { font-size: 1rem; line-height: 1.7; text-align: justify; }
+        .work-item, .education-item, .project-item { margin-bottom: 1.5rem; }
+        .work-header, .education-header, .project-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            margin-bottom: 0.5rem; 
+        }
+        .job-title, .degree-title, .project-title { font-weight: 600; font-size: 1.1rem; }
+        .company, .institution { color: {{ resume.color_scheme }}; font-weight: 500; }
+        .date-location { text-align: right; font-size: 0.9rem; color: #666; }
+        .responsibilities { list-style: none; padding-left: 0; }
+        .responsibilities li { 
+            position: relative; 
+            padding-left: 1.2rem; 
+            margin-bottom: 0.3rem; 
+            line-height: 1.5; 
+        }
+        .responsibilities li:before { 
+            content: '•'; 
+            color: {{ resume.color_scheme }}; 
+            position: absolute; 
+            left: 0; 
+            font-weight: bold; 
+        }
+        .skills-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+        .skill-category { margin-bottom: 1rem; }
+        .skill-category-title { font-weight: 600; color: {{ resume.color_scheme }}; margin-bottom: 0.5rem; }
+        .skill-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .skill-tag { 
+            background: {{ resume.color_scheme }}; 
+            color: white; 
+            padding: 0.2rem 0.6rem; 
+            border-radius: 15px; 
+            font-size: 0.8rem; 
+            font-weight: 500; 
+        }
+        .project-description { margin-bottom: 0.5rem; line-height: 1.5; }
+        .project-tech { font-size: 0.9rem; color: #666; font-style: italic; }
+        a { color: {{ resume.color_scheme }}; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="name">{{ resume.full_name }}</h1>
+            <div class="contact-info">
+                <span class="contact-item">{{ resume.email }}</span>
+                <span class="contact-item">{{ resume.phone }}</span>
+                {% if resume.linkedin_url %}
+                    <span class="contact-item"><a href="{{ resume.linkedin_url }}">LinkedIn</a></span>
+                {% endif %}
+                {% if resume.github_url %}
+                    <span class="contact-item"><a href="{{ resume.github_url }}">GitHub</a></span>
+                {% endif %}
+                {% if resume.website_url %}
+                    <span class="contact-item"><a href="{{ resume.website_url }}">Portfolio</a></span>
+                {% endif %}
+            </div>
+        </header>
+
+        <section class="section">
+            <h2 class="section-title">Professional Summary</h2>
+            <p class="summary">{{ resume.professional_summary }}</p>
+        </section>
+
+        {% if resume.work_experiences.all %}
+        <section class="section">
+            <h2 class="section-title">Professional Experience</h2>
+            {% for work in resume.work_experiences.all %}
+            <div class="work-item">
+                <div class="work-header">
+                    <div>
+                        <div class="job-title">{{ work.job_title }}</div>
+                        <div class="company">{{ work.company_name }}</div>
+                    </div>
+                    <div class="date-location">
+                        {{ work.start_date|date:"M Y" }} - {% if work.is_current %}Present{% else %}{{ work.end_date|date:"M Y" }}{% endif %}<br>
+                        {{ work.company_location }}
+                    </div>
+                </div>
+                {% if work.responsibilities.all %}
+                <ul class="responsibilities">
+                    {% for resp in work.responsibilities.all %}
+                    <li>{{ resp.description }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </section>
+        {% endif %}
+
+        {% if resume.education.all %}
+        <section class="section">
+            <h2 class="section-title">Education</h2>
+            {% for edu in resume.education.all %}
+            <div class="education-item">
+                <div class="education-header">
+                    <div>
+                        <div class="degree-title">{{ edu.degree_name }}</div>
+                        <div class="institution">{{ edu.institution_name }}</div>
+                    </div>
+                    <div class="date-location">
+                        {{ edu.graduation_date|date:"M Y" }}<br>
+                        {{ edu.institution_location }}
+                    </div>
+                </div>
+                {% if edu.relevant_coursework %}
+                <p><strong>Relevant Coursework:</strong> {{ edu.relevant_coursework }}</p>
+                {% endif %}
+                {% if edu.honors %}
+                <p><strong>Honors:</strong> {{ edu.honors }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </section>
+        {% endif %}
+
+        {% if resume.skills.all %}
+        <section class="section">
+            <h2 class="section-title">Skills</h2>
+            <div class="skills-grid">
+                {% regroup resume.skills.all by category as skill_categories %}
+                {% for category in skill_categories %}
+                <div class="skill-category">
+                    <div class="skill-category-title">
+                        {% if category.grouper == 'programming' %}Programming Languages
+                        {% elif category.grouper == 'software' %}Software
+                        {% elif category.grouper == 'soft_skills' %}Soft Skills
+                        {% elif category.grouper == 'languages' %}Languages
+                        {% else %}{{ category.grouper|title }}
+                        {% endif %}
+                    </div>
+                    <div class="skill-tags">
+                        {% for skill in category.list %}
+                        <span class="skill-tag">{{ skill.name }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if resume.projects.all %}
+        <section class="section">
+            <h2 class="section-title">Projects</h2>
+            {% for project in resume.projects.all %}
+            <div class="project-item">
+                <div class="project-header">
+                    <div class="project-title">
+                        {% if project.url %}
+                            <a href="{{ project.url }}">{{ project.title }}</a>
+                        {% else %}
+                            {{ project.title }}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="project-description">{{ project.description }}</div>
+                <div class="project-tech"><strong>Technologies:</strong> {{ project.technologies_used }}</div>
+            </div>
+            {% endfor %}
+        </section>
+        {% endif %}
+    </div>
+</body>
+</html>
