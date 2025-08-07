@@ -10,6 +10,110 @@ document.addEventListener('DOMContentLoaded', function() {
     addProject();
 });
 
+// Helper functions for form population
+function fillInput(id, value) {
+    const input = document.getElementById(id);
+    if (input) {
+        input.value = value;
+    }
+}
+
+function fillInputInContainer(container, name, value) {
+    const input = container.querySelector(`[name="${name}"]`);
+    if (input) {
+        input.value = value;
+    }
+}
+
+function fillCheckboxInContainer(container, name, checked) {
+    const checkbox = container.querySelector(`[name="${name}"]`);
+    if (checkbox) {
+        checkbox.checked = checked;
+    }
+}
+
+function fillSelectInContainer(container, name, value) {
+    const select = container.querySelector(`[name="${name}"]`);
+    if (select) {
+        select.value = value;
+    }
+}
+
+function formatDateForInput(dateString) {
+    if (!dateString) return '';
+    
+    try {
+        // Handle various date formats from LinkedIn
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            // Try parsing month/year format
+            const parts = dateString.split(/[\s\-\/]/);
+            if (parts.length >= 2) {
+                const month = parts[0];
+                const year = parts[1];
+                return `${year}-${month.padStart(2, '0')}-01`;
+            }
+            return '';
+        }
+        return date.toISOString().split('T')[0];
+    } catch (e) {
+        return '';
+    }
+}
+
+function categorizeSkill(skillName) {
+    const skill = skillName.toLowerCase();
+    
+    const programmingKeywords = ['javascript', 'python', 'java', 'c++', 'c#', 'php', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'typescript'];
+    const softwareKeywords = ['excel', 'word', 'powerpoint', 'photoshop', 'illustrator', 'autocad', 'solidworks', 'salesforce'];
+    const languageKeywords = ['english', 'spanish', 'french', 'german', 'chinese', 'japanese', 'korean', 'arabic', 'hindi'];
+    
+    if (programmingKeywords.some(keyword => skill.includes(keyword))) {
+        return 'programming';
+    } else if (softwareKeywords.some(keyword => skill.includes(keyword))) {
+        return 'software';
+    } else if (languageKeywords.some(keyword => skill.includes(keyword))) {
+        return 'languages';
+    } else if (skill.includes('leadership') || skill.includes('communication') || skill.includes('management')) {
+        return 'soft_skills';
+    } else {
+        return 'other';
+    }
+}
+
+// Helper functions to clear sections
+function clearWorkExperiences() {
+    const container = document.getElementById('work-experiences-container');
+    if (container) {
+        container.innerHTML = '';
+        addWorkExperience(); // Add one empty experience
+    }
+}
+
+function clearEducation() {
+    const container = document.getElementById('education-container');
+    if (container) {
+        container.innerHTML = '';
+        addEducation(); // Add one empty education
+    }
+}
+
+function clearSkills() {
+    const container = document.getElementById('skills-container');
+    if (container) {
+        container.innerHTML = '';
+        addSkill(); // Add one empty skill
+    }
+}
+
+function clearProjects() {
+    const container = document.getElementById('projects-container');
+    if (container) {
+        container.innerHTML = '';
+        addProject(); // Add one empty project
+    }
+}
+
 function initializeForm() {
     document.querySelectorAll('input, textarea, select').forEach(element => {
         element.addEventListener('input', updateLivePreview);
@@ -30,6 +134,23 @@ function initializeForm() {
             updateLivePreview();
         });
     });
+
+    // Add specific listeners for color scheme and font pair
+    const colorSchemeInput = document.getElementById('color_scheme');
+    if (colorSchemeInput) {
+        colorSchemeInput.addEventListener('input', function() {
+            resumeData.color_scheme = this.value;
+            updateLivePreview();
+        });
+    }
+
+    const fontPairSelect = document.getElementById('font_pair');
+    if (fontPairSelect) {
+        fontPairSelect.addEventListener('change', function() {
+            resumeData.font_pair = this.value;
+            updateLivePreview();
+        });
+    }
 
     document.querySelector('.template-option[data-template="modern"]').click();
 }
@@ -392,11 +513,14 @@ function removeProject(index) {
 }
 
 function collectFormData() {
+    // Preserve the profile image data if it exists
+    const existingProfileImageData = resumeData.profile_image_data;
+    const existingProfileImage = resumeData.profile_image;
+    
     resumeData = {
         full_name: document.getElementById('full_name')?.value || '',
         email: document.getElementById('email')?.value || '',
         phone: document.getElementById('phone')?.value || '',
-        linkedin_url: document.getElementById('linkedin_url')?.value || '',
         github_url: document.getElementById('github_url')?.value || '',
         website_url: document.getElementById('website_url')?.value || '',
         professional_summary: document.getElementById('professional_summary')?.value || '',
@@ -408,6 +532,14 @@ function collectFormData() {
         skills: [],
         projects: []
     };
+    
+    // Restore the profile image data
+    if (existingProfileImageData) {
+        resumeData.profile_image_data = existingProfileImageData;
+    }
+    if (existingProfileImage) {
+        resumeData.profile_image = existingProfileImage;
+    }
 
     document.querySelectorAll('.work-experience-item').forEach((item, index) => {
         const jobTitle = item.querySelector(`[name="work_job_title_${index}"]`)?.value;
@@ -508,99 +640,182 @@ function updateLivePreview() {
 function generatePreviewHTML() {
     const colorScheme = resumeData.color_scheme || '#3B82F6';
     const template = resumeData.template_choice || 'modern';
+    const fontPair = resumeData.font_pair || 'Roboto/Lora';
+    
+    // Parse font pair
+    const fonts = fontPair.split('/');
+    const primaryFont = fonts[0] || 'Roboto';
+    const secondaryFont = fonts[1] || 'Lora';
+    
+    // Template-specific styles
+    let containerStyle = `font-family: '${primaryFont}', sans-serif; color: #333; line-height: 1.6; max-width: 100%; margin: 0 auto; padding: 1rem; background: white;`;
+    let headerStyle = `text-align: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid ${colorScheme};`;
+    
+    if (template === 'professional') {
+        containerStyle += ` display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;`;
+        headerStyle = `text-align: left; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 3px solid ${colorScheme}; grid-column: 1 / -1;`;
+    } else if (template === 'creative') {
+        containerStyle = `font-family: '${primaryFont}', sans-serif; color: #333; line-height: 1.7; max-width: 100%; margin: 0 auto; padding: 1.5rem; background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-left: 5px solid ${colorScheme};`;
+        headerStyle = `text-align: center; margin-bottom: 2rem; padding: 1.5rem; background: ${colorScheme}15; border-radius: 10px;`;
+    }
     
     return `
-        <div class="resume-preview-container" style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 100%; margin: 0 auto; padding: 1rem; background: white;">
-            <div style="text-align: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid ${colorScheme};">
-                <h1 style="font-size: 1.8rem; font-weight: bold; color: ${colorScheme}; margin-bottom: 0.5rem;">${resumeData.full_name}</h1>
+        <div class="resume-preview-container" style="${containerStyle}">
+            <div style="${headerStyle}">
+                ${(resumeData.profile_image_data || resumeData.profile_image) ? `<div style="text-align: center; margin-bottom: 1rem;"><img src="${resumeData.profile_image_data || resumeData.profile_image}" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid ${colorScheme};"></div>` : ''}
+                <h1 style="font-size: 1.8rem; font-weight: bold; color: ${colorScheme}; margin-bottom: 0.5rem; font-family: '${secondaryFont}', serif;">${resumeData.full_name}</h1>
                 <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem; font-size: 0.9rem;">
                     <span>${resumeData.email}</span>
                     <span>${resumeData.phone}</span>
-                    ${resumeData.linkedin_url ? `<span><a href="${resumeData.linkedin_url}" style="color: ${colorScheme};">LinkedIn</a></span>` : ''}
                     ${resumeData.github_url ? `<span><a href="${resumeData.github_url}" style="color: ${colorScheme};">GitHub</a></span>` : ''}
                     ${resumeData.website_url ? `<span><a href="${resumeData.website_url}" style="color: ${colorScheme};">Portfolio</a></span>` : ''}
                 </div>
             </div>
             
-            ${resumeData.professional_summary ? `
-                <div style="margin-bottom: 1.5rem;">
-                    <h2 style="font-size: 1.2rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; border-bottom: 1px solid ${colorScheme}; padding-bottom: 0.2rem;">Professional Summary</h2>
-                    <p style="text-align: justify;">${resumeData.professional_summary}</p>
-                </div>
-            ` : ''}
-            
-            ${resumeData.work_experiences.length > 0 ? `
-                <div style="margin-bottom: 1.5rem;">
-                    <h2 style="font-size: 1.2rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; border-bottom: 1px solid ${colorScheme}; padding-bottom: 0.2rem;">Professional Experience</h2>
-                    ${resumeData.work_experiences.map(work => `
-                        <div style="margin-bottom: 1rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                                <div>
-                                    <div style="font-weight: 600; font-size: 1rem;">${work.job_title}</div>
-                                    <div style="color: ${colorScheme}; font-weight: 500;">${work.company_name}</div>
-                                </div>
-                                <div style="text-align: right; font-size: 0.8rem; color: #666;">
-                                    ${formatDate(work.start_date)} - ${work.is_current ? 'Present' : formatDate(work.end_date)}<br>
-                                    ${work.company_location}
-                                </div>
+            ${template === 'professional' ? 
+                // Professional template with sidebar
+                `<div>
+                    ${resumeData.skills.length > 0 ? `
+                        <div style="margin-bottom: 1.5rem;">
+                            <h2 style="font-size: 1.1rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; font-family: '${secondaryFont}', serif;">Skills</h2>
+                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                ${resumeData.skills.map(skill => `
+                                    <div style="background: ${colorScheme}20; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem;">${skill.name}</div>
+                                `).join('')}
                             </div>
-                            ${work.responsibilities.length > 0 ? `
-                                <ul style="margin-left: 1rem; margin-top: 0.5rem;">
-                                    ${work.responsibilities.map(resp => `<li style="margin-bottom: 0.2rem;">${resp.description}</li>`).join('')}
-                                </ul>
-                            ` : ''}
                         </div>
-                    `).join('')}
-                </div>
-            ` : ''}
-            
-            ${resumeData.education.length > 0 ? `
-                <div style="margin-bottom: 1.5rem;">
-                    <h2 style="font-size: 1.2rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; border-bottom: 1px solid ${colorScheme}; padding-bottom: 0.2rem;">Education</h2>
-                    ${resumeData.education.map(edu => `
-                        <div style="margin-bottom: 1rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <div>
+                    ` : ''}
+                    
+                    ${resumeData.education.length > 0 ? `
+                        <div style="margin-bottom: 1.5rem;">
+                            <h2 style="font-size: 1.1rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; font-family: '${secondaryFont}', serif;">Education</h2>
+                            ${resumeData.education.map(edu => `
+                                <div style="margin-bottom: 1rem; font-size: 0.9rem;">
                                     <div style="font-weight: 600;">${edu.degree_name}</div>
                                     <div style="color: ${colorScheme};">${edu.institution_name}</div>
+                                    <div style="font-size: 0.8rem; color: #666;">${formatDate(edu.graduation_date)}</div>
                                 </div>
-                                <div style="text-align: right; font-size: 0.8rem; color: #666;">
-                                    ${formatDate(edu.graduation_date)}<br>
-                                    ${edu.institution_location}
-                                </div>
-                            </div>
-                            ${edu.honors ? `<p style="margin-top: 0.3rem; font-size: 0.9rem;"><strong>Honors:</strong> ${edu.honors}</p>` : ''}
-                            ${edu.relevant_coursework ? `<p style="margin-top: 0.3rem; font-size: 0.9rem;"><strong>Relevant Coursework:</strong> ${edu.relevant_coursework}</p>` : ''}
+                            `).join('')}
                         </div>
-                    `).join('')}
+                    ` : ''}
                 </div>
-            ` : ''}
-            
-            ${resumeData.skills.length > 0 ? `
-                <div style="margin-bottom: 1.5rem;">
-                    <h2 style="font-size: 1.2rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; border-bottom: 1px solid ${colorScheme}; padding-bottom: 0.2rem;">Skills</h2>
-                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                        ${resumeData.skills.map(skill => `
-                            <span style="background: ${colorScheme}; color: white; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">${skill.name}</span>
+                <div>
+                    ${resumeData.professional_summary ? `
+                        <div style="margin-bottom: 1.5rem;">
+                            <h2 style="font-size: 1.2rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; font-family: '${secondaryFont}', serif;">Professional Summary</h2>
+                            <p style="text-align: justify;">${resumeData.professional_summary}</p>
+                        </div>
+                    ` : ''}
+                    
+                    ${resumeData.work_experiences.length > 0 ? `
+                        <div style="margin-bottom: 1.5rem;">
+                            <h2 style="font-size: 1.2rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; font-family: '${secondaryFont}', serif;">Professional Experience</h2>
+                            ${resumeData.work_experiences.map(work => `
+                                <div style="margin-bottom: 1rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                        <div>
+                                            <div style="font-weight: 600; font-size: 1rem;">${work.job_title}</div>
+                                            <div style="color: ${colorScheme}; font-weight: 500;">${work.company_name}</div>
+                                        </div>
+                                        <div style="text-align: right; font-size: 0.8rem; color: #666;">
+                                            ${formatDate(work.start_date)} - ${work.is_current ? 'Present' : formatDate(work.end_date)}<br>
+                                            ${work.company_location}
+                                        </div>
+                                    </div>
+                                    ${work.responsibilities.length > 0 ? `
+                                        <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                            ${work.responsibilities.map(resp => `<li style="margin-bottom: 0.2rem;">${resp.description}</li>`).join('')}
+                                        </ul>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>`
+                :
+                // Single column layout for modern and creative
+                `${resumeData.professional_summary ? `
+                    <div style="margin-bottom: 1.5rem;">
+                        <h2 style="font-size: 1.2rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; border-bottom: 1px solid ${colorScheme}; padding-bottom: 0.2rem; font-family: '${secondaryFont}', serif;">Professional Summary</h2>
+                        <p style="text-align: justify;">${resumeData.professional_summary}</p>
+                    </div>
+                ` : ''}
+                
+                ${resumeData.work_experiences.length > 0 ? `
+                    <div style="margin-bottom: 1.5rem;">
+                        <h2 style="font-size: 1.2rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; border-bottom: 1px solid ${colorScheme}; padding-bottom: 0.2rem; font-family: '${secondaryFont}', serif;">Professional Experience</h2>
+                        ${resumeData.work_experiences.map(work => `
+                            <div style="margin-bottom: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 1rem;">${work.job_title}</div>
+                                        <div style="color: ${colorScheme}; font-weight: 500;">${work.company_name}</div>
+                                    </div>
+                                    <div style="text-align: right; font-size: 0.8rem; color: #666;">
+                                        ${formatDate(work.start_date)} - ${work.is_current ? 'Present' : formatDate(work.end_date)}<br>
+                                        ${work.company_location}
+                                    </div>
+                                </div>
+                                ${work.responsibilities.length > 0 ? `
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        ${work.responsibilities.map(resp => `<li style="margin-bottom: 0.2rem;">${resp.description}</li>`).join('')}
+                                    </ul>
+                                ` : ''}
+                            </div>
                         `).join('')}
                     </div>
-                </div>
-            ` : ''}
-            
-            ${resumeData.projects.length > 0 ? `
-                <div style="margin-bottom: 1.5rem;">
-                    <h2 style="font-size: 1.2rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; border-bottom: 1px solid ${colorScheme}; padding-bottom: 0.2rem;">Projects</h2>
-                    ${resumeData.projects.map(project => `
-                        <div style="margin-bottom: 1rem;">
-                            <div style="font-weight: 600; color: ${colorScheme};">
-                                ${project.url ? `<a href="${project.url}" style="color: ${colorScheme};">${project.title}</a>` : project.title}
+                ` : ''}
+                
+                ${resumeData.education.length > 0 ? `
+                    <div style="margin-bottom: 1.5rem;">
+                        <h2 style="font-size: 1.2rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; border-bottom: 1px solid ${colorScheme}; padding-bottom: 0.2rem; font-family: '${secondaryFont}', serif;">Education</h2>
+                        ${resumeData.education.map(edu => `
+                            <div style="margin-bottom: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div>
+                                        <div style="font-weight: 600;">${edu.degree_name}</div>
+                                        <div style="color: ${colorScheme};">${edu.institution_name}</div>
+                                    </div>
+                                    <div style="text-align: right; font-size: 0.8rem; color: #666;">
+                                        ${formatDate(edu.graduation_date)}<br>
+                                        ${edu.institution_location}
+                                    </div>
+                                </div>
+                                ${edu.honors ? `<p style="margin-top: 0.3rem; font-size: 0.9rem;"><strong>Honors:</strong> ${edu.honors}</p>` : ''}
+                                ${edu.relevant_coursework ? `<p style="margin-top: 0.3rem; font-size: 0.9rem;"><strong>Relevant Coursework:</strong> ${edu.relevant_coursework}</p>` : ''}
                             </div>
-                            <p style="margin: 0.3rem 0;">${project.description}</p>
-                            <div style="font-size: 0.9rem; color: #666; font-style: italic;"><strong>Technologies:</strong> ${project.technologies_used}</div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                ${resumeData.skills.length > 0 ? `
+                    <div style="margin-bottom: 1.5rem;">
+                        <h2 style="font-size: 1.2rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; border-bottom: 1px solid ${colorScheme}; padding-bottom: 0.2rem; font-family: '${secondaryFont}', serif;">Skills</h2>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            ${resumeData.skills.map(skill => `
+                                <span style="background: ${colorScheme}; color: white; padding: 0.2rem 0.6rem; border-radius: ${template === 'creative' ? '20px' : '12px'}; font-size: 0.8rem; font-weight: 500;">${skill.name}</span>
+                            `).join('')}
                         </div>
-                    `).join('')}
-                </div>
-            ` : ''}
+                    </div>
+                ` : ''}
+                
+                ${resumeData.projects.length > 0 ? `
+                    <div style="margin-bottom: 1.5rem;">
+                        <h2 style="font-size: 1.2rem; font-weight: 600; color: ${colorScheme}; margin-bottom: 0.5rem; border-bottom: 1px solid ${colorScheme}; padding-bottom: 0.2rem; font-family: '${secondaryFont}', serif;">Projects</h2>
+                        ${resumeData.projects.map(project => `
+                            <div style="margin-bottom: 1rem;">
+                                <div style="font-weight: 600; color: ${colorScheme};">
+                                    ${project.url ? `<a href="${project.url}" style="color: ${colorScheme}; text-decoration: none;">${project.title}</a>` : project.title}
+                                </div>
+                                <div style="margin-top: 0.3rem; font-size: 0.9rem;">${project.description}</div>
+                                <div style="margin-top: 0.3rem; font-size: 0.8rem; color: #666;">
+                                    <strong>Technologies:</strong> ${project.technologies_used}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}`
+            }
         </div>
     `;
 }
@@ -621,18 +836,56 @@ async function generateResume() {
     showLoading('Generating your resume...');
 
     try {
-        const response = await fetch('/api/resumes/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
-            },
-            body: JSON.stringify(resumeData)
-        });
+        // Check if we have a profile image file
+        const profileImageInput = document.getElementById('profile_image');
+        const hasProfileImage = profileImageInput && profileImageInput.files && profileImageInput.files[0];
+        
+        let response;
+        
+        if (hasProfileImage) {
+            // Use FormData for file upload
+            const formData = new FormData();
+            
+            // Add all resume data fields
+            Object.keys(resumeData).forEach(key => {
+                if (key === 'work_experiences' || key === 'education' || key === 'skills' || key === 'projects') {
+                    formData.append(key, JSON.stringify(resumeData[key]));
+                } else if (key !== 'profile_image_data') { // Skip the base64 data
+                    formData.append(key, resumeData[key]);
+                }
+            });
+            
+            // Add the profile image file if one is selected
+            if (profileImageInput.files[0]) {
+                formData.append('profile_image', profileImageInput.files[0]);
+            }
+            
+            response = await fetch('/api/resumes/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: formData
+            });
+        } else {
+            // Use JSON for no file upload
+            response = await fetch('/api/resumes/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(resumeData)
+            });
+        }
 
         if (response.ok) {
             const result = await response.json();
             generatedResumeId = result.id;
+            
+            // Update resumeData with server response to get the correct image URL
+            resumeData = { ...resumeData, ...result };
+            
             showNotification('Resume generated successfully!', 'success');
             document.getElementById('preview-actions').style.display = 'block';
             updateLivePreview();
@@ -794,3 +1047,21 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Profile image preview function
+function previewProfileImage(input) {
+    const previewDiv = document.getElementById('image_preview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewDiv.innerHTML = `<img src="${e.target.result}" alt="Profile Preview" class="w-full h-full object-cover">`;
+            resumeData.profile_image_data = e.target.result; // Store image data
+            updateLivePreview(); // Update the live preview
+        };
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        previewDiv.innerHTML = '<i class="fas fa-user text-gray-400 text-xl"></i>';
+        delete resumeData.profile_image_data; // Remove image data
+        updateLivePreview();
+    }
+}

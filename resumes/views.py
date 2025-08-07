@@ -82,6 +82,17 @@ def download_resume_pdf(request, resume_id):
                     border-bottom: 2px solid {resume.color_scheme};
                     padding-bottom: 1rem;
                 }}
+                .profile-image {{
+                    width: 100px;
+                    height: 100px;
+                    border-radius: 50%;
+                    object-fit: cover;
+                    border: 3px solid {resume.color_scheme};
+                    margin-bottom: 1rem;
+                    display: block;
+                    margin-left: auto;
+                    margin-right: auto;
+                }}
                 .name {{
                     font-size: 2.5rem;
                     font-weight: 700;
@@ -159,14 +170,18 @@ def download_resume_pdf(request, resume_id):
             </style>
         </head>
         <body>
-            <header class="header">
+            <header class="header">'''
+        
+        # Add profile image if it exists
+        if resume.profile_image:
+            html_content += f'<img src="{request.build_absolute_uri(resume.profile_image.url)}" alt="Profile Picture" class="profile-image">'
+            
+        html_content += f'''
                 <h1 class="name">{resume.full_name}</h1>
                 <div class="contact-info">
                     <span>{resume.email}</span>
                     <span>{resume.phone}</span>'''
         
-        if resume.linkedin_url:
-            html_content += f'<span><a href="{resume.linkedin_url}">LinkedIn</a></span>'
         if resume.github_url:
             html_content += f'<span><a href="{resume.github_url}">GitHub</a></span>'
         if resume.website_url:

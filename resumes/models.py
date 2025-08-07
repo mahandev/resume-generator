@@ -6,7 +6,7 @@ class Resume(models.Model):
     full_name = models.CharField(max_length=100)
     email = models.EmailField()
     phone = models.CharField(max_length=20)
-    linkedin_url = models.URLField(blank=True, null=True)
+    profile_image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
     github_url = models.URLField(blank=True, null=True)
     website_url = models.URLField(blank=True, null=True)
     professional_summary = models.TextField()

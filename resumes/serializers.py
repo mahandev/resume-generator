@@ -1,4 +1,5 @@
 from rest_framework import serializers
+import json
 from .models import Resume, WorkExperience, Responsibility, Education, Skill, Project
 
 class ResponsibilitySerializer(serializers.ModelSerializer):
@@ -38,10 +39,34 @@ class ResumeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Resume
-        fields = ['id', 'full_name', 'email', 'phone', 'linkedin_url', 'github_url',
+        fields = ['id', 'full_name', 'email', 'phone', 'profile_image', 'github_url',
                  'website_url', 'professional_summary', 'template_choice', 'color_scheme',
                  'font_pair', 'work_experiences', 'education', 'skills', 'projects',
                  'created_at', 'updated_at']
+
+    def to_internal_value(self, data):
+        # Handle FormData with JSON strings for nested objects
+        if hasattr(data, 'get'):
+            # Create a new dict instead of copying to avoid file objects
+            parsed_data = {}
+            
+            # Copy regular fields
+            for key, value in data.items():
+                if key in ['work_experiences', 'education', 'skills', 'projects']:
+                    # Parse JSON strings for nested objects
+                    if isinstance(value, str):
+                        try:
+                            parsed_data[key] = json.loads(value)
+                        except json.JSONDecodeError:
+                            parsed_data[key] = value
+                    else:
+                        parsed_data[key] = value
+                else:
+                    parsed_data[key] = value
+            
+            data = parsed_data
+        
+        return super().to_internal_value(data)
 
     def create(self, validated_data):
         work_experiences_data = validated_data.pop('work_experiences', [])
